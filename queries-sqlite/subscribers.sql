@@ -398,10 +398,10 @@ clicks AS (
         GROUP BY links.id ORDER BY links.id
 )
 SELECT (SELECT email FROM prof) email,
- COALESCE((SELECT json_group_array(json_object('id',id,'uuid',uuid,'email',email,'name',name,'attribs',json(attribs),'status',status,'created_at',created_at,'updated_at',updated_at)) FROM prof),'[]') profile,
- COALESCE((SELECT json_group_array(json_object('subscription_status',subscription_status,'name',name,'type',type,'created_at',created_at)) FROM subs),'[]') subscriptions,
- COALESCE((SELECT json_group_array(json_object('campaign',campaign,'views',views)) FROM views),'[]') campaign_views,
- COALESCE((SELECT json_group_array(json_object('url',url,'clicks',clicks)) FROM clicks),'[]') link_clicks;
+ CAST(COALESCE((SELECT json_group_array(json_object('id',id,'uuid',uuid,'email',email,'name',name,'attribs',json(attribs),'status',status,'created_at',created_at,'updated_at',updated_at)) FROM prof),'[]') AS BLOB) profile,
+ CAST(COALESCE((SELECT json_group_array(json_object('subscription_status',subscription_status,'name',name,'type',type,'created_at',created_at)) FROM subs),'[]') AS BLOB) subscriptions,
+ CAST(COALESCE((SELECT json_group_array(json_object('campaign',campaign,'views',views)) FROM views),'[]') AS BLOB) campaign_views,
+ CAST(COALESCE((SELECT json_group_array(json_object('url',url,'clicks',clicks)) FROM clicks),'[]') AS BLOB) link_clicks;
 
 -- name: get-subscriber-activity
 -- Gets the subscriber's campaign views and link clicks with detailed information
@@ -438,5 +438,5 @@ clicks AS (
     ORDER BY last_clicked_at DESC
 )
 SELECT
- COALESCE((SELECT json_group_array(json_object('id',id,'uuid',uuid,'name',name,'subject',subject,'view_count',view_count,'last_viewed_at',last_viewed_at)) FROM views),'[]') campaign_views,
- COALESCE((SELECT json_group_array(json_object('link_id',link_id,'url',url,'campaign_id',campaign_id,'campaign_uuid',campaign_uuid,'campaign_name',campaign_name,'campaign_subject',campaign_subject,'click_count',click_count,'last_clicked_at',last_clicked_at)) FROM clicks),'[]') link_clicks;
+ CAST(COALESCE((SELECT json_group_array(json_object('id',id,'uuid',uuid,'name',name,'subject',subject,'view_count',view_count,'last_viewed_at',last_viewed_at)) FROM views),'[]') AS BLOB) campaign_views,
+ CAST(COALESCE((SELECT json_group_array(json_object('link_id',link_id,'url',url,'campaign_id',campaign_id,'campaign_uuid',campaign_uuid,'campaign_name',campaign_name,'campaign_subject',campaign_subject,'click_count',click_count,'last_clicked_at',last_clicked_at)) FROM clicks),'[]') AS BLOB) link_clicks;

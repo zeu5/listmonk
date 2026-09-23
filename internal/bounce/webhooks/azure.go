@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/knadh/listmonk/internal/dbtypes"
 	"github.com/knadh/listmonk/models"
 )
 
@@ -129,7 +130,7 @@ func (a *Azure) ProcessBounce(req *http.Request, b []byte) ([]models.Bounce, err
 		out = append(out, models.Bounce{
 			Email:     email,
 			Type:      typ,
-			Meta:      json.RawMessage(ev.RawData),
+			Meta:      dbtypes.RawJSON(ev.RawData),
 			Source:    "azure",
 			CreatedAt: createdAt,
 		})

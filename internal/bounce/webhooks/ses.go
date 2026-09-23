@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/knadh/listmonk/internal/dbtypes"
 	"github.com/knadh/listmonk/models"
 )
 
@@ -169,7 +170,7 @@ func (s *SES) ProcessBounce(b []byte) (models.Bounce, error) {
 		CampaignUUID: campUUID,
 		Type:         typ,
 		Source:       "ses",
-		Meta:         json.RawMessage(n.Message),
+		Meta:         dbtypes.RawJSON(n.Message),
 		CreatedAt:    time.Time(m.Mail.Timestamp),
 	}, nil
 }

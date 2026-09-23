@@ -126,9 +126,11 @@ func (s JSON) Scan(b any) error {
 		s = make(JSON)
 		return nil
 	}
-
-	if data, ok := b.([]byte); ok {
+	switch data := b.(type) {
+	case []byte:
 		return json.Unmarshal(data, &s)
+	case string:
+		return json.Unmarshal([]byte(data), &s)
 	}
 	return fmt.Errorf("could not not decode type %T -> %T", b, s)
 }
@@ -140,8 +142,11 @@ func (s StringIntMap) Scan(src any) error {
 		return nil
 	}
 
-	if data, ok := src.([]byte); ok {
+	switch data := src.(type) {
+	case []byte:
 		return json.Unmarshal(data, &s)
+	case string:
+		return json.Unmarshal([]byte(data), &s)
 	}
 	return fmt.Errorf("could not not decode type %T -> %T", src, s)
 }

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/knadh/listmonk/internal/auth"
+	"github.com/knadh/listmonk/internal/dbtypes"
 	"github.com/knadh/listmonk/internal/notifs"
 	"github.com/knadh/listmonk/models"
 	"github.com/labstack/echo/v4"
@@ -212,7 +213,7 @@ func (a *App) PreviewCampaignArchive(c echo.Context) error {
 		return err
 	}
 
-	camp.ArchiveMeta = json.RawMessage([]byte(c.FormValue("archive_meta")))
+	camp.ArchiveMeta = dbtypes.RawJSON(c.FormValue("archive_meta"))
 
 	// "Compile" the campaign template with appropriate data.
 	res, err := a.compileArchiveCampaigns([]models.Campaign{camp})
@@ -745,7 +746,7 @@ func (a *App) validateCampaignFields(c campReq) (campReq, error) {
 	}
 
 	if len(c.ArchiveMeta) == 0 {
-		c.ArchiveMeta = json.RawMessage("{}")
+		c.ArchiveMeta = dbtypes.RawJSON("{}")
 	}
 
 	if c.ArchiveSlug.String != "" {

@@ -1,16 +1,16 @@
 -- name: get-user-roles
 WITH list_perms AS (
- SELECT r.parent_id, json_group_array(json_object('id',r.list_id,'name',l.name,'permissions',json(r.permissions))) list_permissions
+ SELECT r.parent_id, json_group_array(json_object('id',r.list_id,'name',l.name,'permissions',json(listmonk_array(r.permissions)))) list_permissions
  FROM roles r LEFT JOIN lists l ON l.id=r.list_id WHERE r.parent_id IS NOT NULL GROUP BY r.parent_id)
-SELECT r.*, COALESCE(p.list_permissions,'[]') list_permissions FROM roles r
+SELECT r.*, CAST(COALESCE(p.list_permissions,'[]') AS BLOB) list_permissions FROM roles r
 LEFT JOIN list_perms p ON p.parent_id=r.id
 WHERE r.type='user' AND r.parent_id IS NULL AND ($1=0 OR r.id=$1) ORDER BY r.created_at;
 
 -- name: get-list-roles
 WITH list_perms AS (
- SELECT r.parent_id, json_group_array(json_object('id',r.list_id,'name',l.name,'permissions',json(r.permissions))) list_permissions
+ SELECT r.parent_id, json_group_array(json_object('id',r.list_id,'name',l.name,'permissions',json(listmonk_array(r.permissions)))) list_permissions
  FROM roles r LEFT JOIN lists l ON l.id=r.list_id WHERE r.parent_id IS NOT NULL GROUP BY r.parent_id)
-SELECT r.*, COALESCE(p.list_permissions,'[]') list_permissions FROM roles r
+SELECT r.*, CAST(COALESCE(p.list_permissions,'[]') AS BLOB) list_permissions FROM roles r
 LEFT JOIN list_perms p ON p.parent_id=r.id WHERE r.type='list' AND r.parent_id IS NULL ORDER BY r.created_at;
 
 -- name: create-role

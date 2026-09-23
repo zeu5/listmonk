@@ -20,7 +20,7 @@ WITH ls AS (
            SUM(subscriber_count) AS subscriber_count
     FROM mat_list_subscriber_stats WHERE status IS NOT NULL GROUP BY list_id
 )
-SELECT ls.*, COALESCE(ss.subscriber_statuses, '{}') subscriber_statuses,
+SELECT ls.*, CAST(COALESCE(ss.subscriber_statuses, '{}') AS BLOB) subscriber_statuses,
        COALESCE(ss.subscriber_count, 0) subscriber_count
 FROM ls LEFT JOIN statuses ss ON ls.id=ss.list_id ORDER BY %order%;
 

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/knadh/listmonk/internal/dbtypes"
 	"github.com/knadh/listmonk/models"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -94,7 +95,7 @@ func (p *Postmark) ProcessBounce(b []byte, c echo.Context) ([]models.Bounce, err
 		CampaignUUID: campUUID,
 		Type:         typ,
 		Source:       "postmark",
-		Meta:         json.RawMessage(b),
+		Meta:         dbtypes.RawJSON(b),
 		CreatedAt:    n.BouncedAt,
 	}}, nil
 }

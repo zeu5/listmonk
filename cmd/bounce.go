@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/knadh/listmonk/internal/auth"
+	"github.com/knadh/listmonk/internal/dbtypes"
 	"github.com/knadh/listmonk/models"
 	"github.com/labstack/echo/v4"
 )
@@ -156,7 +157,7 @@ func (a *App) BounceWebhook(c echo.Context) error {
 		}
 
 		if len(b.Meta) == 0 {
-			b.Meta = json.RawMessage("{}")
+			b.Meta = dbtypes.RawJSON("{}")
 		}
 
 		if b.CreatedAt.Year() == 0 {

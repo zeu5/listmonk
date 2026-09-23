@@ -1,8 +1,9 @@
 package models
 
 import (
-	"encoding/json"
 	"time"
+
+	"github.com/knadh/listmonk/internal/dbtypes"
 )
 
 const (
@@ -16,7 +17,7 @@ type Bounce struct {
 	ID        int             `db:"id" json:"id"`
 	Type      string          `db:"type" json:"type"`
 	Source    string          `db:"source" json:"source"`
-	Meta      json.RawMessage `db:"meta" json:"meta"`
+	Meta      dbtypes.RawJSON `db:"meta" json:"meta"`
 	CreatedAt time.Time       `db:"created_at" json:"created_at"`
 
 	// One of these should be provided.
@@ -26,7 +27,7 @@ type Bounce struct {
 	SubscriberStatus string `db:"subscriber_status" json:"subscriber_status"`
 
 	CampaignUUID string           `db:"campaign_uuid" json:"campaign_uuid,omitempty"`
-	Campaign     *json.RawMessage `db:"campaign" json:"campaign"`
+	Campaign     *dbtypes.RawJSON `db:"campaign" json:"campaign"`
 
 	// Pseudofield for getting the total number of bounces
 	// in searches and queries.

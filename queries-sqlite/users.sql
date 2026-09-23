@@ -24,12 +24,12 @@ AND (SELECT COUNT(*) FROM users WHERE id NOT IN (SELECT value FROM json_each(lis
 -- name: get-users
 WITH lp AS (
  SELECT parent.id list_role_id,
- json_group_array(json_object('id',COALESCE(child.list_id,parent.list_id),'name',COALESCE(l.name,pl.name),'permissions',json(COALESCE(child.permissions,parent.permissions)))) list_role_perms
+ json_group_array(json_object('id',COALESCE(child.list_id,parent.list_id),'name',COALESCE(l.name,pl.name),'permissions',json(listmonk_array(COALESCE(child.permissions,parent.permissions))))) list_role_perms
  FROM roles parent LEFT JOIN roles child ON child.parent_id=parent.id AND child.type='list'
  LEFT JOIN lists l ON l.id=child.list_id LEFT JOIN lists pl ON pl.id=parent.list_id
  WHERE parent.type='list' AND parent.parent_id IS NULL GROUP BY parent.id)
 SELECT users.*, ur.id user_role_id, ur.name user_role_name, ur.permissions user_role_permissions,
- lr.id list_role_id, lr.name list_role_name, lp.list_role_perms
+ lr.id list_role_id, lr.name list_role_name, CAST(lp.list_role_perms AS BLOB) list_role_perms
 FROM users LEFT JOIN roles ur ON ur.id=users.user_role_id
 LEFT JOIN roles lr ON lr.id=users.list_role_id LEFT JOIN lp ON lp.list_role_id=lr.id
 ORDER BY users.created_at;
@@ -38,8 +38,8 @@ ORDER BY users.created_at;
 WITH sel AS (SELECT * FROM users WHERE CASE WHEN $1!=0 THEN id=$1 WHEN $2!='' THEN username=$2 WHEN $3!='' THEN email=$3 END)
 SELECT sel.*, ur.id user_role_id, ur.name user_role_name, ur.permissions user_role_permissions,
  lr.id list_role_id, lr.name list_role_name,
- (SELECT json_group_array(json_object('id',COALESCE(cr.list_id,lr.list_id),'name',COALESCE(cl.name,ll.name),'permissions',json(COALESCE(cr.permissions,lr.permissions))))
-  FROM roles cr LEFT JOIN lists cl ON cl.id=cr.list_id LEFT JOIN lists ll ON ll.id=lr.list_id WHERE cr.parent_id=lr.id AND cr.type='list') list_role_perms
+ CAST((SELECT json_group_array(json_object('id',COALESCE(cr.list_id,lr.list_id),'name',COALESCE(cl.name,ll.name),'permissions',json(listmonk_array(COALESCE(cr.permissions,lr.permissions)))))
+  FROM roles cr LEFT JOIN lists cl ON cl.id=cr.list_id LEFT JOIN lists ll ON ll.id=lr.list_id WHERE cr.parent_id=lr.id AND cr.type='list') AS BLOB) list_role_perms
 FROM sel LEFT JOIN roles ur ON ur.id=sel.user_role_id AND ur.type='user'
 LEFT JOIN roles lr ON lr.id=sel.list_role_id AND lr.type='list';
 

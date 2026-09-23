@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/knadh/listmonk/internal/dbtypes"
 	"github.com/knadh/listmonk/models"
 )
 
@@ -76,7 +77,7 @@ func (s *Sendgrid) ProcessBounce(sig, timestamp string, b []byte) ([]models.Boun
 			CampaignUUID: n.CampaignUUID,
 			Email:        strings.ToLower(n.Email),
 			Type:         typ,
-			Meta:         json.RawMessage(b),
+			Meta:         dbtypes.RawJSON(b),
 			Source:       "sendgrid",
 			CreatedAt:    tstamp,
 		}

@@ -54,4 +54,14 @@ func TestSQLiteSubscriberAndCampaignOperations(t *testing.T) {
 	if len(subscribers) != 1 || subscribers[0].ID != sub.ID {
 		t.Fatalf("subscribers=%#v", subscribers)
 	}
+	if _, err = db.Exec("UPDATE campaigns SET status='running' WHERE id=?", campaignID); err != nil {
+		t.Fatal(err)
+	}
+	var campaigns []*models.Campaign
+	if err = ops["next-campaigns"].Select(&campaigns, pq.Array([]int64{}), pq.Array([]int64{})); err != nil {
+		t.Fatal(err)
+	}
+	if len(campaigns) != 1 || campaigns[0].ID != campaignID {
+		t.Fatalf("campaigns=%#v", campaigns)
+	}
 }

@@ -4,8 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/gofrs/uuid/v5"
@@ -152,12 +154,16 @@ func (c *Core) QuerySubscribers(searchStr, queryExp string, listIDs []int, subSt
 		c.log.Printf("error preparing subscriber query: %v", err)
 		return nil, 0, echo.NewHTTPError(http.StatusBadRequest, c.i18n.Ts("subscribers.errorPreparingQuery", "error", pqErrMsg(err)))
 	}
-	defer tx.Rollback()
-
 	var out models.Subscribers
 	if err := tx.Select(&out, stmt, pq.Array(listIDs), subStatus, searchStr, offset, limit); err != nil {
+		_ = tx.Rollback()
 		return nil, 0, echo.NewHTTPError(http.StatusInternalServerError,
 			c.i18n.Ts("globals.messages.errorFetching", "name", "{globals.terms.subscribers}", "error", pqErrMsg(err)))
+	}
+	// Release the read transaction before lazy loading through the main pool.
+	// SQLite runs with one connection and would otherwise wait on itself here.
+	if err := tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
+		return nil, 0, err
 	}
 
 	// Lazy load lists for each subscriber.
@@ -602,6 +608,9 @@ func (c *Core) getSubscriberCount(searchStr, queryExp, subStatus string, listIDs
 
 // validateQueryTables checks if the query accesses only allowed tables.
 func validateQueryTables(db *sqlx.DB, query string, allowedTables map[string]struct{}, args ...any) error {
+	if db.DriverName() == "sqlite" {
+		return validateSQLiteQueryTables(db, query, allowedTables, args...)
+	}
 	// Get the EXPLAIN (FORMAT JSON) output.
 	tx, err := db.BeginTxx(context.Background(), &sql.TxOptions{ReadOnly: true})
 	if err != nil {
@@ -628,6 +637,37 @@ func validateQueryTables(db *sqlx.DB, query string, allowedTables map[string]str
 	}
 
 	return nil
+}
+
+var sqlitePlanTable = regexp.MustCompile(`(?i)\b(?:SCAN|SEARCH)\s+(?:TABLE\s+)?["` + "`" + `\[]?([^\s"` + "`" + `\]]+)`)
+
+func validateSQLiteQueryTables(db *sqlx.DB, query string, allowedTables map[string]struct{}, args ...any) error {
+	rows, err := db.Queryx("EXPLAIN QUERY PLAN "+query, args...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id, parent, unused int
+		var detail string
+		if err := rows.Scan(&id, &parent, &unused, &detail); err != nil {
+			return err
+		}
+		match := sqlitePlanTable.FindStringSubmatch(detail)
+		if len(match) != 2 {
+			continue
+		}
+		table := strings.TrimSuffix(match[1], ".")
+		// json_each is an application-owned virtual table used to expand array
+		// parameters, not a table exposed to segmentation expressions.
+		if table == "json_each" {
+			continue
+		}
+		if _, ok := allowedTables[table]; !ok {
+			return fmt.Errorf("table '%s' is not allowed", table)
+		}
+	}
+	return rows.Err()
 }
 
 // getTablesFromQueryPlan parses the EXPLAIN JSON to find all "Relation Name" entries.

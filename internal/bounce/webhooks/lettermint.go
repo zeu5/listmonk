@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/knadh/listmonk/internal/dbtypes"
 	"github.com/knadh/listmonk/models"
 )
 
@@ -111,7 +112,7 @@ func (l *Lettermint) ProcessBounce(sig string, body []byte) ([]models.Bounce, er
 		CampaignUUID: campUUID,
 		Type:         typ,
 		Source:       "lettermint",
-		Meta:         json.RawMessage(body),
+		Meta:         dbtypes.RawJSON(body),
 		CreatedAt:    t,
 	}}, nil
 }

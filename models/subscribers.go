@@ -1,11 +1,11 @@
 package models
 
 import (
-	"encoding/json"
 	"errors"
 	"strings"
 
 	"github.com/jmoiron/sqlx/types"
+	"github.com/knadh/listmonk/internal/dbtypes"
 	"github.com/lib/pq"
 	null "gopkg.in/volatiletech/null.v6"
 )
@@ -105,7 +105,7 @@ type Subscription struct {
 	List
 	SubscriptionStatus    null.String     `db:"subscription_status" json:"subscription_status"`
 	SubscriptionCreatedAt null.String     `db:"subscription_created_at" json:"subscription_created_at"`
-	Meta                  json.RawMessage `db:"meta" json:"meta"`
+	Meta                  dbtypes.RawJSON `db:"meta" json:"meta"`
 }
 
 // SubscriberExport represents a subscriber record that is exported to raw data.
@@ -122,14 +122,14 @@ type SubscriberExport struct {
 // SubscriberExportProfile represents a subscriber's collated data in JSON for export.
 type SubscriberExportProfile struct {
 	Email         string          `db:"email" json:"-"`
-	Profile       json.RawMessage `db:"profile" json:"profile,omitempty"`
-	Subscriptions json.RawMessage `db:"subscriptions" json:"subscriptions,omitempty"`
-	CampaignViews json.RawMessage `db:"campaign_views" json:"campaign_views,omitempty"`
-	LinkClicks    json.RawMessage `db:"link_clicks" json:"link_clicks,omitempty"`
+	Profile       dbtypes.RawJSON `db:"profile" json:"profile,omitempty"`
+	Subscriptions dbtypes.RawJSON `db:"subscriptions" json:"subscriptions,omitempty"`
+	CampaignViews dbtypes.RawJSON `db:"campaign_views" json:"campaign_views,omitempty"`
+	LinkClicks    dbtypes.RawJSON `db:"link_clicks" json:"link_clicks,omitempty"`
 }
 
 // SubscriberActivity represents a subscriber's campaign views and link clicks for the Activity tab.
 type SubscriberActivity struct {
-	CampaignViews json.RawMessage `db:"campaign_views" json:"campaign_views"`
-	LinkClicks    json.RawMessage `db:"link_clicks" json:"link_clicks"`
+	CampaignViews dbtypes.RawJSON `db:"campaign_views" json:"campaign_views"`
+	LinkClicks    dbtypes.RawJSON `db:"link_clicks" json:"link_clicks"`
 }

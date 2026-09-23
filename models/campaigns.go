@@ -2,7 +2,6 @@ package models
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"html/template"
@@ -10,6 +9,7 @@ import (
 	txttpl "text/template"
 
 	"github.com/jmoiron/sqlx/types"
+	"github.com/knadh/listmonk/internal/dbtypes"
 	"github.com/lib/pq"
 	null "gopkg.in/volatiletech/null.v6"
 )
@@ -57,7 +57,7 @@ type Campaign struct {
 	Archive           bool            `db:"archive" json:"archive"`
 	ArchiveSlug       null.String     `db:"archive_slug" json:"archive_slug"`
 	ArchiveTemplateID null.Int        `db:"archive_template_id" json:"archive_template_id"`
-	ArchiveMeta       json.RawMessage `db:"archive_meta" json:"archive_meta"`
+	ArchiveMeta       dbtypes.RawJSON `db:"archive_meta" json:"archive_meta"`
 
 	// TemplateBody is joined in from templates by the next-campaigns query.
 	TemplateBody        string             `db:"template_body" json:"-"`

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/knadh/listmonk/internal/dbtypes"
 	"github.com/knadh/listmonk/models"
 )
 
@@ -93,7 +94,7 @@ func (p *Forwardemail) ProcessBounce(sigHex string, body []byte) ([]models.Bounc
 		CampaignUUID: campUUID,
 		Type:         typ,
 		Source:       "forwardemail",
-		Meta:         json.RawMessage(body),
+		Meta:         dbtypes.RawJSON(body),
 		CreatedAt:    n.BouncedAt,
 	}}, nil
 }

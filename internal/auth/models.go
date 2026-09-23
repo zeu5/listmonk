@@ -1,9 +1,9 @@
 package auth
 
 import (
-	"encoding/json"
 	"net/http"
 
+	"github.com/knadh/listmonk/internal/dbtypes"
 	"github.com/labstack/echo/v4"
 	"github.com/lib/pq"
 	null "gopkg.in/volatiletech/null.v6"
@@ -104,7 +104,7 @@ type User struct {
 	ListRoleID    *int             `db:"list_role_id" json:"list_role_id,omitempty"`
 	ListRoleName  null.String      `db:"list_role_name" json:"-"`
 	UserRolePerms pq.StringArray   `db:"user_role_permissions" json:"-"`
-	ListsPermsRaw *json.RawMessage `db:"list_role_perms" json:"-"`
+	ListsPermsRaw *dbtypes.RawJSON `db:"list_role_perms" json:"-"`
 
 	// Non-DB fields filled post-retrieval.
 	UserRole struct {
@@ -142,7 +142,7 @@ type Role struct {
 
 	ListID   null.Int         `db:"list_id" json:"-"`
 	ParentID null.Int         `db:"parent_id" json:"-"`
-	ListsRaw json.RawMessage  `db:"list_permissions" json:"-"`
+	ListsRaw dbtypes.RawJSON  `db:"list_permissions" json:"-"`
 	Lists    []ListPermission `db:"-" json:"lists"`
 }
 
@@ -153,7 +153,7 @@ type ListRole struct {
 
 	ListID   null.Int         `db:"list_id" json:"-"`
 	ParentID null.Int         `db:"parent_id" json:"-"`
-	ListsRaw json.RawMessage  `db:"list_permissions" json:"-"`
+	ListsRaw dbtypes.RawJSON  `db:"list_permissions" json:"-"`
 	Lists    []ListPermission `db:"-" json:"lists"`
 }
 

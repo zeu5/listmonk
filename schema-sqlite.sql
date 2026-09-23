@@ -9,7 +9,7 @@ CREATE TABLE subscribers (
     uuid            TEXT NOT NULL UNIQUE,
     email           TEXT NOT NULL UNIQUE,
     name            TEXT NOT NULL,
-    attribs         TEXT NOT NULL DEFAULT '{}',
+    attribs         BLOB NOT NULL DEFAULT X'7B7D',
     status          TEXT NOT NULL DEFAULT 'enabled',
     created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -52,7 +52,7 @@ DROP TABLE IF EXISTS subscriber_lists;
 CREATE TABLE subscriber_lists (
     subscriber_id      INTEGER REFERENCES subscribers(id) ON DELETE CASCADE ON UPDATE CASCADE,
     list_id            INTEGER NULL REFERENCES lists(id) ON DELETE CASCADE ON UPDATE CASCADE,
-    meta               TEXT NOT NULL DEFAULT '{}',
+    meta               BLOB NOT NULL DEFAULT X'7B7D',
     status             TEXT NOT NULL DEFAULT 'unconfirmed',
 
     created_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -103,8 +103,8 @@ CREATE TABLE campaigns (
     altbody          TEXT NULL,
     content_type     TEXT NOT NULL DEFAULT 'richtext',
     send_at          TIMESTAMP,
-    headers          TEXT NOT NULL DEFAULT '[]',
-    attribs          TEXT NOT NULL DEFAULT '{}',
+    headers          BLOB NOT NULL DEFAULT X'5B5D',
+    attribs          BLOB NOT NULL DEFAULT X'7B7D',
     status           TEXT NOT NULL DEFAULT 'draft',
     tags             TEXT,
 
@@ -126,7 +126,7 @@ CREATE TABLE campaigns (
     archive             BOOLEAN NOT NULL DEFAULT 0,
     archive_slug        TEXT NULL UNIQUE,
     archive_template_id INTEGER REFERENCES templates(id) ON DELETE SET NULL,
-    archive_meta        TEXT NOT NULL DEFAULT '{}',
+    archive_meta        BLOB NOT NULL DEFAULT X'7B7D',
 
     started_at       TIMESTAMP,
     created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -178,7 +178,7 @@ CREATE TABLE media (
     filename         TEXT NOT NULL,
     content_type     TEXT NOT NULL DEFAULT 'application/octet-stream',
     thumb            TEXT NOT NULL,
-    meta             TEXT NOT NULL DEFAULT '{}',
+    meta             BLOB NOT NULL DEFAULT X'7B7D',
     created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 DROP INDEX IF EXISTS idx_media_filename; CREATE INDEX idx_media_filename ON media(provider, filename);
@@ -312,7 +312,7 @@ CREATE TABLE bounces (
     campaign_id      INTEGER NULL REFERENCES campaigns(id) ON DELETE SET NULL ON UPDATE CASCADE,
     type             TEXT NOT NULL DEFAULT 'hard',
     source           TEXT NOT NULL DEFAULT '',
-    meta             TEXT NOT NULL DEFAULT '{}',
+    meta             BLOB NOT NULL DEFAULT X'7B7D',
     created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 DROP INDEX IF EXISTS idx_bounces_sub_id; CREATE INDEX idx_bounces_sub_id ON bounces(subscriber_id);
