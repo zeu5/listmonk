@@ -20,6 +20,7 @@ import (
 	"github.com/knadh/listmonk/internal/buflog"
 	"github.com/knadh/listmonk/internal/captcha"
 	"github.com/knadh/listmonk/internal/core"
+	"github.com/knadh/listmonk/internal/dbconn"
 	"github.com/knadh/listmonk/internal/events"
 	"github.com/knadh/listmonk/internal/i18n"
 	"github.com/knadh/listmonk/internal/manager"
@@ -159,6 +160,9 @@ func init() {
 		lo.Fatal("the database does not appear to be setup. Run --install.")
 	}
 
+	if ko.Bool("upgrade") && currentDBDriver() == dbconn.SQLite {
+		lo.Fatal("database upgrades are not supported for SQLite; create a fresh database instead")
+	}
 	if ko.Bool("upgrade") {
 		// Even on explicit upgrade runs, for nightly builds, do not record the last
 		// migration version in the DB.
@@ -170,7 +174,10 @@ func init() {
 	// For nightly builds, always auto-run pending migrations without
 	// recording the last version in the DB. Migrations are idempotent, and between
 	// nightly releases, they may change multiple times.
-	if isNightly {
+	if currentDBDriver() == dbconn.SQLite {
+		// SQLite support currently targets fresh installs. The schema records the
+		// current version during installation, so PostgreSQL migrations do not apply.
+	} else if isNightly {
 		lo.Printf("auto-running all migrations for nightly %s since last major version", versionString)
 		upgrade(db, fs, false, false)
 	} else {
@@ -179,7 +186,7 @@ func init() {
 	}
 
 	// Read the SQL queries from the queries file.
-	qMap := readQueries(queryFilePath, fs)
+	qMap := readAppQueries(fs)
 
 	// Load settings from DB.
 	if q, ok := qMap["get-settings"]; ok {

@@ -34,7 +34,7 @@ FRONTEND_EMAIL_BUILDER_DEPS = \
 
 BIN := listmonk
 STATIC := config.toml.sample \
-	schema.sql queries:/queries permissions.json \
+	schema.sql schema-sqlite.sql queries:/queries queries-sqlite:/queries-sqlite permissions.json \
 	static/public:/public \
 	static/email-templates \
 	frontend/dist:/admin \

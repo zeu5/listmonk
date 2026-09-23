@@ -3,6 +3,22 @@
 ### TOML Configuration file
 One or more TOML files can be read by passing `--config config.toml` multiple times. Apart from a few low level configuration variables and the database configuration, all other settings can be managed from the `Settings` dashboard on the admin UI.
 
+### Database backend
+
+PostgreSQL remains the default database backend. For a new SQLite installation, configure a writable database path and run the normal installer:
+
+```toml
+[db]
+type = "sqlite"
+path = "/var/lib/listmonk/listmonk.db"
+```
+
+```shell
+./listmonk --config config.toml --install
+```
+
+SQLite enables foreign keys, WAL journaling, and a busy timeout automatically. It uses one database connection because SQLite permits only one concurrent writer. SQLite support is intended for fresh installations; `--upgrade` is not supported for SQLite databases. PostgreSQL connection fields under `[db]` are ignored when `type = "sqlite"`.
+
 To generate a new sample configuration file, run `listmonk --new-config`
 
 ### Environment variables

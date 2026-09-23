@@ -1,6 +1,8 @@
 package core
 
 import (
+	"database/sql"
+	"errors"
 	"net/http"
 	"strings"
 
@@ -75,6 +77,10 @@ func (c *Core) RecordBounce(b models.Bounce) error {
 
 	if err != nil {
 		// Ignore the error if it complained of no subscriber.
+		if errors.Is(err, sql.ErrNoRows) {
+			c.log.Printf("bounced subscriber (%s / %s) not found", b.SubscriberUUID, b.Email)
+			return nil
+		}
 		if pqErr, ok := err.(*pq.Error); ok && pqErr.Column == "subscriber_id" {
 			c.log.Printf("bounced subscriber (%s / %s) not found", b.SubscriberUUID, b.Email)
 			return nil

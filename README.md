@@ -2,7 +2,7 @@
 
 [![listmonk-logo](https://user-images.githubusercontent.com/547147/231084896-835dba66-2dfe-497c-ba0f-787564c0819e.png)](https://listmonk.app)
 
-listmonk is a standalone, self-hosted, newsletter and mailing list manager. It is fast, feature-rich, and packed into a single binary. It uses a PostgreSQL database as its data store.
+listmonk is a standalone, self-hosted, newsletter and mailing list manager. It is fast, feature-rich, and packed into a single binary. It supports PostgreSQL and SQLite as data stores.
 
 [![listmonk-dashboard](https://github.com/user-attachments/assets/689b5fbb-dd25-4956-a36f-e3226a65f9c4)](https://listmonk.app)
 
@@ -32,7 +32,7 @@ __________________
 ### Binary
 - Download the [latest release](https://github.com/knadh/listmonk/releases) and extract the listmonk binary.
 - `./listmonk --new-config` to generate config.toml. Edit it.
-- `./listmonk --install` to setup the Postgres DB (or `--upgrade` to upgrade an existing DB. Upgrades are idempotent and running them multiple times have no side effects).
+- `./listmonk --install` to set up the configured database. PostgreSQL databases can subsequently be upgraded with `--upgrade`. SQLite currently targets new installations and does not support migrations.
 - Run `./listmonk` and visit `http://localhost:9000`
 
 See [installation docs](https://listmonk.app/docs/installation)

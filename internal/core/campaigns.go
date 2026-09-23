@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/gofrs/uuid/v5"
-	"github.com/jmoiron/sqlx"
 	"github.com/knadh/listmonk/models"
 	"github.com/labstack/echo/v4"
 	"github.com/lib/pq"
@@ -383,7 +382,7 @@ func (c *Core) GetRunningCampaignStats() ([]models.CampaignStats, error) {
 
 func (c *Core) GetCampaignAnalyticsCounts(campIDs []int, typ, fromDate, toDate string) ([]models.CampaignAnalyticsCount, error) {
 	// Pick campaign view counts or click counts.
-	var stmt *sqlx.Stmt
+	var stmt models.Statement
 	switch typ {
 	case "views":
 		stmt = c.q.GetCampaignViewCounts

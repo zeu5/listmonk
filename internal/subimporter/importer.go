@@ -69,9 +69,9 @@ type Importer struct {
 
 // Options represents import options.
 type Options struct {
-	UpsertStmt         *sql.Stmt
-	BlocklistStmt      *sql.Stmt
-	UpdateListDateStmt *sql.Stmt
+	UpsertStmt         models.Statement
+	BlocklistStmt      models.Statement
+	UpdateListDateStmt models.Statement
 	PostCB             func(subject string, data any) error
 
 	DomainBlocklist []string
@@ -273,8 +273,10 @@ func (im *Importer) sendNotif(status string) error {
 // invoked as a goroutine.
 func (s *Session) Start() {
 	var (
-		tx    *sql.Tx
-		stmt  *sql.Stmt
+		tx   *sql.Tx
+		stmt interface {
+			Exec(args ...any) (sql.Result, error)
+		}
 		err   error
 		total = 0
 		cur   = 0
@@ -285,24 +287,31 @@ func (s *Session) Start() {
 
 	for sub := range s.subQueue {
 		if cur == 0 {
-			// New transaction batch.
-			tx, err = s.im.db.Begin()
-			if err != nil {
-				s.log.Printf("error creating DB transaction: %v", err)
-				continue
-			}
-
+			var base models.Statement
 			if s.opt.Mode == ModeSubscribe {
-				stmt = tx.Stmt(s.im.opt.UpsertStmt)
+				base = s.im.opt.UpsertStmt
 			} else {
-				stmt = tx.Stmt(s.im.opt.BlocklistStmt)
+				base = s.im.opt.BlocklistStmt
+			}
+			if prepared, ok := base.(interface{ SQLStmt() *sql.Stmt }); ok {
+				tx, err = s.im.db.Begin()
+				if err != nil {
+					s.log.Printf("error creating DB transaction: %v", err)
+					continue
+				}
+				stmt = tx.Stmt(prepared.SQLStmt())
+			} else {
+				tx = nil
+				stmt = base
 			}
 		}
 
 		uu, err := uuid.NewV4()
 		if err != nil {
 			s.log.Printf("error generating UUID: %v", err)
-			tx.Rollback()
+			if tx != nil {
+				tx.Rollback()
+			}
 			break
 		}
 
@@ -313,7 +322,9 @@ func (s *Session) Start() {
 		}
 		if err != nil {
 			s.log.Printf("error executing insert: %v", err)
-			tx.Rollback()
+			if tx != nil {
+				tx.Rollback()
+			}
 			break
 		}
 		cur++
@@ -321,12 +332,14 @@ func (s *Session) Start() {
 
 		// Batch size is met. Commit.
 		if cur%commitBatchSize == 0 {
-			if err := tx.Commit(); err != nil {
-				tx.Rollback()
-				s.log.Printf("error committing to DB: %v", err)
-			} else {
-				s.im.incrementImportCount(cur)
-				s.log.Printf("imported %d", total)
+			if tx != nil {
+				if err := tx.Commit(); err != nil {
+					tx.Rollback()
+					s.log.Printf("error committing to DB: %v", err)
+				} else {
+					s.im.incrementImportCount(cur)
+					s.log.Printf("imported %d", total)
+				}
 			}
 
 			cur = 0
@@ -345,12 +358,14 @@ func (s *Session) Start() {
 	}
 
 	// Queue's closed and there are records left to commit.
-	if err := tx.Commit(); err != nil {
-		tx.Rollback()
-		s.im.setStatus(StatusFailed)
-		s.log.Printf("error committing to DB: %v", err)
-		s.im.sendNotif(StatusFailed)
-		return
+	if tx != nil {
+		if err := tx.Commit(); err != nil {
+			tx.Rollback()
+			s.im.setStatus(StatusFailed)
+			s.log.Printf("error committing to DB: %v", err)
+			s.im.sendNotif(StatusFailed)
+			return
+		}
 	}
 
 	s.im.incrementImportCount(cur)

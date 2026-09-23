@@ -7,6 +7,13 @@ address = "localhost:9000"
 
 # Database.
 [db]
+# Database backend. Supported values are "postgres" (default) and "sqlite".
+type = "postgres"
+
+# SQLite database file. Required when type = "sqlite". PostgreSQL connection
+# fields below are ignored in that mode.
+# path = "listmonk.db"
+
 host = "localhost"
 port = 5432
 user = "listmonk"

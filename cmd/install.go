@@ -9,6 +9,7 @@ import (
 	"github.com/gofrs/uuid/v5"
 	"github.com/jmoiron/sqlx"
 	"github.com/knadh/listmonk/internal/auth"
+	"github.com/knadh/listmonk/internal/dbconn"
 	"github.com/knadh/listmonk/internal/utils"
 	"github.com/knadh/listmonk/models"
 	"github.com/knadh/stuffbin"
@@ -18,13 +19,16 @@ import (
 
 // install runs the first time setup of setting up the database.
 func install(lastVer string, db *sqlx.DB, fs stuffbin.FileSystem, prompt, idempotent bool) {
-	qMap := readQueries(queryFilePath, fs)
+	qMap := readAppQueries(fs)
 
 	fmt.Println("")
 	if !idempotent {
 		fmt.Println("** first time installation **")
-		fmt.Printf("** IMPORTANT: This will wipe existing listmonk tables and types in the DB '%s' **",
-			ko.String("db.database"))
+		databaseName := ko.String("db.database")
+		if currentDBDriver() == dbconn.SQLite {
+			databaseName = ko.String("db.path")
+		}
+		fmt.Printf("** IMPORTANT: This will wipe existing listmonk tables and types in the DB '%s' **", databaseName)
 	} else {
 		fmt.Println("** first time (idempotent) installation **")
 	}
@@ -46,7 +50,7 @@ func install(lastVer string, db *sqlx.DB, fs stuffbin.FileSystem, prompt, idempo
 	if idempotent {
 		if _, err := db.Exec("SELECT count(*) FROM settings"); err != nil {
 			// If "settings" doesn't exist, assume it's a fresh install.
-			if pqErr, ok := err.(*pq.Error); ok && pqErr.Code != "42P01" {
+			if !isTableNotExistErr(err) {
 				lo.Fatalf("error checking existing DB schema: %v", err)
 			}
 		} else {
@@ -119,7 +123,18 @@ func install(lastVer string, db *sqlx.DB, fs stuffbin.FileSystem, prompt, idempo
 
 // installSchema executes the SQL schema and creates the necessary tables and types.
 func installSchema(curVer string, db *sqlx.DB, fs stuffbin.FileSystem) error {
-	q, err := fs.Read("/schema.sql")
+	schemaPath := "/schema.sql"
+	if currentDBDriver() == dbconn.SQLite {
+		schemaPath = "/schema-sqlite.sql"
+		// The fresh-install schema intentionally drops existing tables. Disable
+		// FK enforcement around that operation because SQLite otherwise rejects
+		// drops in PostgreSQL's historical schema order.
+		if _, err := db.Exec("PRAGMA foreign_keys=OFF"); err != nil {
+			return err
+		}
+		defer db.Exec("PRAGMA foreign_keys=ON")
+	}
+	q, err := fs.Read(schemaPath)
 	if err != nil {
 		return err
 	}
@@ -279,6 +294,11 @@ func installCampaign(campTplID, archiveTplID int, q *models.Queries) {
 // recordMigrationVersion inserts the given version (of DB migration) into the
 // `migrations` array in the settings table.
 func recordMigrationVersion(ver string, db *sqlx.DB) error {
+	if currentDBDriver() == dbconn.SQLite {
+		_, err := db.Exec(`INSERT INTO settings (key, value) VALUES('migrations', json_array(?))
+			ON CONFLICT (key) DO UPDATE SET value = json_insert(settings.value, '$[#]', ?)`, ver, ver)
+		return err
+	}
 	_, err := db.Exec(fmt.Sprintf(`INSERT INTO settings (key, value)
 	VALUES('migrations', '["%s"]'::JSONB)
 	ON CONFLICT (key) DO UPDATE SET value = settings.value || EXCLUDED.value`, ver))

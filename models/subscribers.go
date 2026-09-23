@@ -5,7 +5,6 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/jmoiron/sqlx"
 	"github.com/jmoiron/sqlx/types"
 	"github.com/lib/pq"
 	null "gopkg.in/volatiletech/null.v6"
@@ -53,7 +52,7 @@ func (subs Subscribers) GetIDs() []int {
 
 // LoadLists lazy loads the lists for all the subscribers
 // in the Subscribers slice and attaches them to their []Lists property.
-func (subs Subscribers) LoadLists(stmt *sqlx.Stmt) error {
+func (subs Subscribers) LoadLists(stmt Statement) error {
 	var sl []subLists
 	err := stmt.Select(&sl, pq.Array(subs.GetIDs()))
 	if err != nil {

@@ -36,7 +36,7 @@ require (
 	github.com/zerodha/easyjson v1.0.1
 	github.com/zerodha/simplesessions/stores/postgres/v3 v3.0.0
 	github.com/zerodha/simplesessions/v3 v3.0.0
-	golang.org/x/mod v0.35.0
+	golang.org/x/mod v0.38.0
 	golang.org/x/oauth2 v0.30.0
 	golang.org/x/text v0.37.0
 	gopkg.in/volatiletech/null.v6 v6.0.0-20170828023728-0bef4e07ae1b
@@ -47,6 +47,7 @@ require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.4.0 // indirect
 	github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc // indirect
+	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
@@ -55,10 +56,12 @@ require (
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/labstack/gommon v0.5.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
-	github.com/mattn/go-isatty v0.0.22 // indirect
+	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
+	github.com/ncruces/go-strftime v1.0.0 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
+	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/spf13/cast v1.9.2 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
@@ -66,6 +69,10 @@ require (
 	golang.org/x/crypto v0.52.0 // indirect
 	golang.org/x/image v0.41.0 // indirect
 	golang.org/x/net v0.54.0 // indirect
-	golang.org/x/sys v0.45.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
+	modernc.org/libc v1.75.7 // indirect
+	modernc.org/mathutil v1.7.1 // indirect
+	modernc.org/memory v1.12.1 // indirect
+	modernc.org/sqlite v1.59.0 // indirect
 )

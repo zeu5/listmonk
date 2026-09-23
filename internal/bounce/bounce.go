@@ -64,7 +64,7 @@ type Manager struct {
 // Queries contains the queries.
 type Queries struct {
 	DB          *sqlx.DB
-	RecordQuery *sqlx.Stmt
+	RecordQuery models.Statement
 }
 
 // New returns a new instance of the bounce manager.

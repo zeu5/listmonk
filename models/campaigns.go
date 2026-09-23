@@ -9,7 +9,6 @@ import (
 	"strings"
 	txttpl "text/template"
 
-	"github.com/jmoiron/sqlx"
 	"github.com/jmoiron/sqlx/types"
 	"github.com/lib/pq"
 	null "gopkg.in/volatiletech/null.v6"
@@ -113,7 +112,7 @@ func (camps Campaigns) GetIDs() []int {
 }
 
 // LoadStats lazy loads campaign stats onto a list of campaigns.
-func (camps Campaigns) LoadStats(stmt *sqlx.Stmt) error {
+func (camps Campaigns) LoadStats(stmt Statement) error {
 	var meta []CampaignMeta
 	if err := stmt.Select(&meta, pq.Array(camps.GetIDs())); err != nil {
 		return err

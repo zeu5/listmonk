@@ -69,9 +69,14 @@ type Auth struct {
 	verifier  *oidc.IDTokenVerifier
 	provider  *oidc.Provider
 	sess      *simplesessions.Manager
-	sessStore *postgres.Store
+	sessStore sessionStore
 	cb        *Callbacks
 	log       *log.Logger
+}
+
+type sessionStore interface {
+	simplesessions.Store
+	Prune() error
 }
 
 var sessPruneInterval = time.Hour * 12
@@ -95,9 +100,15 @@ func New(cfg Config, db *sql.DB, cb *Callbacks, lo *log.Logger) (*Auth, error) {
 			MaxAge:     time.Hour * 24 * 7,
 		},
 	})
-	st, err := postgres.New(postgres.Opt{}, db)
-	if err != nil {
-		return nil, err
+	var st sessionStore
+	if strings.Contains(strings.ToLower(fmt.Sprintf("%T", db.Driver())), "sqlite") {
+		st = newSQLiteSessionStore(db)
+	} else {
+		pgStore, err := postgres.New(postgres.Opt{}, db)
+		if err != nil {
+			return nil, err
+		}
+		st = pgStore
 	}
 	a.sessStore = st
 	a.sess.UseStore(st)

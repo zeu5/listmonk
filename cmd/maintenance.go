@@ -162,10 +162,14 @@ func (a *App) ExportCampaignAnalytics(c echo.Context) error {
 // RunDBVacuum runs a full VACUUM on the PostgreSQL database.
 // VACUUM reclaims storage occupied by dead tuples and updates planner statistics.
 func RunDBVacuum(db *sqlx.DB, lo *log.Logger) {
-	lo.Println("running database VACUUM ANALYZE")
-	if _, err := db.Exec("VACUUM ANALYZE"); err != nil {
-		lo.Printf("error running VACUUM ANALYZE: %v", err)
+	query := "VACUUM ANALYZE"
+	if db.DriverName() == "sqlite" {
+		query = "VACUUM"
+	}
+	lo.Printf("running database %s", query)
+	if _, err := db.Exec(query); err != nil {
+		lo.Printf("error running %s: %v", query, err)
 		return
 	}
-	lo.Println("finished database VACUUM ANALYZE")
+	lo.Printf("finished database %s", query)
 }

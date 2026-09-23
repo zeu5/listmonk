@@ -160,6 +160,9 @@ func getLastMigrationVersion(db *sqlx.DB) (string, error) {
 // isTableNotExistErr checks if the given error represents a Postgres/pq
 // "table does not exist" error.
 func isTableNotExistErr(err error) bool {
+	if strings.Contains(strings.ToLower(err.Error()), "no such table") {
+		return true
+	}
 	if p, ok := err.(*pq.Error); ok {
 		// `settings` table does not exist. It was introduced in v0.7.0.
 		if p.Code == "42P01" {

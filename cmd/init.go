@@ -16,8 +16,8 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"reflect"
 	"runtime"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -27,7 +27,6 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/jmoiron/sqlx/types"
 	"github.com/knadh/goyesql/v2"
-	goyesqlx "github.com/knadh/goyesql/v2/sqlx"
 	koanfmaps "github.com/knadh/koanf/maps"
 	"github.com/knadh/koanf/parsers/toml"
 	"github.com/knadh/koanf/providers/confmap"
@@ -39,6 +38,8 @@ import (
 	"github.com/knadh/listmonk/internal/bounce/mailbox"
 	"github.com/knadh/listmonk/internal/captcha"
 	"github.com/knadh/listmonk/internal/core"
+	"github.com/knadh/listmonk/internal/dbconn"
+	"github.com/knadh/listmonk/internal/dbops"
 	"github.com/knadh/listmonk/internal/i18n"
 	"github.com/knadh/listmonk/internal/manager"
 	"github.com/knadh/listmonk/internal/media"
@@ -62,6 +63,14 @@ const (
 
 	emailMsgr = "email"
 )
+
+func currentDBDriver() string {
+	driver, err := (dbconn.Config{Type: ko.String("db.type")}).Driver()
+	if err != nil {
+		lo.Fatalf("error loading db config: %v", err)
+	}
+	return driver
+}
 
 // UrlConfig contains various URL constants used in the app.
 type UrlConfig struct {
@@ -209,7 +218,9 @@ func initFS(appDir, frontendDir, staticDir, i18nDir string) stuffbin.FileSystem 
 		appFiles = []string{
 			"./config.toml.sample:config.toml.sample",
 			"./queries:queries",
+			"./queries-sqlite:queries-sqlite",
 			"./schema.sql:schema.sql",
+			"./schema-sqlite.sql:schema-sqlite.sql",
 			"./permissions.json:permissions.json",
 		}
 
@@ -312,60 +323,25 @@ func initFS(appDir, frontendDir, staticDir, i18nDir string) stuffbin.FileSystem 
 // initDB initializes the main DB connection pool and parse and loads the app's
 // SQL queries into a prepared query map.
 func initDB() *sqlx.DB {
-	var c struct {
-		Host        string        `koanf:"host"`
-		Port        int           `koanf:"port"`
-		User        string        `koanf:"user"`
-		Password    string        `koanf:"password"`
-		DBName      string        `koanf:"database"`
-		SSLMode     string        `koanf:"ssl_mode"`
-		Params      string        `koanf:"params"`
-		MaxOpen     int           `koanf:"max_open"`
-		MaxIdle     int           `koanf:"max_idle"`
-		MaxLifetime time.Duration `koanf:"max_lifetime"`
-	}
+	var c dbconn.Config
 	if err := ko.Unmarshal("db", &c); err != nil {
 		lo.Fatalf("error loading db config: %v", err)
 	}
 
-	lo.Printf("connecting to db: %s:%d/%s", c.Host, c.Port, c.DBName)
-
-	// Build Postgres DSN conditionally with non-empty fields.
-	fields := map[string]string{
-		"host":     c.Host,
-		"port":     strconv.Itoa(c.Port),
-		"user":     c.User,
-		"password": c.Password,
-		"dbname":   c.DBName,
-		"sslmode":  c.SSLMode,
+	driver, err := c.Driver()
+	if err != nil {
+		lo.Fatalf("error loading db config: %v", err)
 	}
-	if c.Port == 0 {
-		delete(fields, "port")
+	if driver == dbconn.SQLite {
+		lo.Printf("connecting to SQLite db: %s", c.Path)
+	} else {
+		lo.Printf("connecting to db: %s:%d/%s", c.Host, c.Port, c.DBName)
 	}
-
-	var parts []string
-	for k, v := range fields {
-		if v == "" {
-			continue
-		}
-
-		parts = append(parts, k+"="+v)
-	}
-
-	if c.Params != "" {
-		parts = append(parts, c.Params)
-	}
-
-	db, err := sqlx.Connect("postgres", strings.Join(parts, " "))
+	db, err := dbconn.Open(c)
 	if err != nil {
 		lo.Fatalf("error connecting to DB: %v", err)
 	}
-
-	db.SetMaxOpenConns(c.MaxOpen)
-	db.SetMaxIdleConns(c.MaxIdle)
-	db.SetConnMaxLifetime(c.MaxLifetime)
-
-	return db.Unsafe()
+	return db
 }
 
 func readQueries(dir string, fs stuffbin.FileSystem) goyesql.Queries {
@@ -399,6 +375,14 @@ func readQueries(dir string, fs stuffbin.FileSystem) goyesql.Queries {
 	return out
 }
 
+func readAppQueries(fs stuffbin.FileSystem) goyesql.Queries {
+	queries := readQueries(queryFilePath, fs)
+	if currentDBDriver() == dbconn.SQLite {
+		maps.Copy(queries, readQueries("/queries-sqlite", fs))
+	}
+	return queries
+}
+
 // prepareQueries queries prepares a query map and returns a *Queries
 func prepareQueries(qMap goyesql.Queries, db *sqlx.DB, ko *koanf.Koanf) *models.Queries {
 	var (
@@ -421,10 +405,38 @@ func prepareQueries(qMap goyesql.Queries, db *sqlx.DB, ko *koanf.Koanf) *models.
 	}
 	qMap["get-campaign-link-counts"].Query = fmt.Sprintf(qMap["get-campaign-link-counts"].Query, linkSel)
 
-	// Scan and prepare all queries.
+	// Prepare SQL-backed operations. models.Statement is deliberately an
+	// interface so the SQLite factory can replace multi-mutation statements
+	// with transactional Go implementations after this pass.
 	var q models.Queries
-	if err := goyesqlx.ScanToStruct(&q, qMap, db); err != nil {
-		lo.Fatalf("error preparing SQL queries: %v", err)
+	rv := reflect.ValueOf(&q).Elem()
+	rt := rv.Type()
+	statementType := reflect.TypeOf((*models.Statement)(nil)).Elem()
+	overrides := map[string]models.Statement{}
+	if currentDBDriver() == dbconn.SQLite {
+		overrides = dbops.SQLite(db)
+	}
+	for n := 0; n < rt.NumField(); n++ {
+		field := rt.Field(n)
+		name := field.Tag.Get("query")
+		query, ok := qMap[name]
+		if !ok {
+			lo.Fatalf("query %q is missing", name)
+		}
+		switch {
+		case field.Type.Kind() == reflect.String:
+			rv.Field(n).SetString(query.Query)
+		case field.Type == statementType:
+			if operation, ok := overrides[name]; ok {
+				rv.Field(n).Set(reflect.ValueOf(operation))
+				continue
+			}
+			stmt, err := db.Preparex(query.Query)
+			if err != nil {
+				lo.Fatalf("error preparing query %q: %v", name, err)
+			}
+			rv.Field(n).Set(reflect.ValueOf(models.Statement(&models.PreparedStatement{Stmt: stmt})))
+		}
 	}
 
 	return &q
@@ -647,9 +659,9 @@ func initImporter(q *models.Queries, db *sqlx.DB, core *core.Core, i *i18n.I18n,
 		subimporter.Options{
 			DomainBlocklist:    ko.Strings("privacy.domain_blocklist"),
 			DomainAllowlist:    ko.Strings("privacy.domain_allowlist"),
-			UpsertStmt:         q.UpsertSubscriber.Stmt,
-			BlocklistStmt:      q.UpsertBlocklistSubscriber.Stmt,
-			UpdateListDateStmt: q.UpdateListsDate.Stmt,
+			UpsertStmt:         q.UpsertSubscriber,
+			BlocklistStmt:      q.UpsertBlocklistSubscriber,
+			UpdateListDateStmt: q.UpdateListsDate,
 
 			// Hook for triggering admin notifications and refreshing stats materialized
 			// views after a successful import.
@@ -819,7 +831,7 @@ func initNotifs(fs stuffbin.FileSystem, i *i18n.I18n, em *email.Emailer, u *UrlC
 
 // initBounceManager initializes the bounce manager that scans mailboxes and listens to webhooks
 // for incoming bounce events.
-func initBounceManager(cb func(models.Bounce) error, stmt *sqlx.Stmt, lo *log.Logger, ko *koanf.Koanf) *bounce.Manager {
+func initBounceManager(cb func(models.Bounce) error, stmt models.Statement, lo *log.Logger, ko *koanf.Koanf) *bounce.Manager {
 	opt := bounce.Opt{
 		WebhooksEnabled:         ko.Bool("bounce.webhooks_enabled"),
 		SESEnabled:              ko.Bool("bounce.ses_enabled"),

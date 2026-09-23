@@ -9,135 +9,145 @@ import (
 	"github.com/lib/pq"
 )
 
+// Statement is the common execution surface shared by prepared SQL statements
+// and backend-specific Go operations. PostgreSQL uses Statement directly;
+// SQLite can use transactional implementations for operations that PostgreSQL
+// expresses as data-changing CTEs.
+type Statement interface {
+	Exec(args ...any) (sql.Result, error)
+	Get(dest any, args ...any) error
+	Select(dest any, args ...any) error
+}
+
 // Queries contains all prepared SQL queries.
 type Queries struct {
-	GetDashboardCharts *sqlx.Stmt `query:"get-dashboard-charts"`
-	GetDashboardCounts *sqlx.Stmt `query:"get-dashboard-counts"`
+	GetDashboardCharts Statement `query:"get-dashboard-charts"`
+	GetDashboardCounts Statement `query:"get-dashboard-counts"`
 
-	InsertSubscriber                *sqlx.Stmt `query:"insert-subscriber"`
-	UpsertSubscriber                *sqlx.Stmt `query:"upsert-subscriber"`
-	UpsertBlocklistSubscriber       *sqlx.Stmt `query:"upsert-blocklist-subscriber"`
-	GetSubscriber                   *sqlx.Stmt `query:"get-subscriber"`
-	HasSubscriberLists              *sqlx.Stmt `query:"has-subscriber-list"`
-	GetSubscribersByEmails          *sqlx.Stmt `query:"get-subscribers-by-emails"`
-	GetSubscriberLists              *sqlx.Stmt `query:"get-subscriber-lists"`
-	GetSubscriptions                *sqlx.Stmt `query:"get-subscriptions"`
-	GetSubscriberListsLazy          *sqlx.Stmt `query:"get-subscriber-lists-lazy"`
-	UpdateSubscriber                *sqlx.Stmt `query:"update-subscriber"`
-	UpdateSubscriberWithLists       *sqlx.Stmt `query:"update-subscriber-with-lists"`
-	BlocklistSubscribers            *sqlx.Stmt `query:"blocklist-subscribers"`
-	AddSubscribersToLists           *sqlx.Stmt `query:"add-subscribers-to-lists"`
-	DeleteSubscriptions             *sqlx.Stmt `query:"delete-subscriptions"`
-	DeleteUnconfirmedSubscriptions  *sqlx.Stmt `query:"delete-unconfirmed-subscriptions"`
-	ConfirmSubscriptionOptin        *sqlx.Stmt `query:"confirm-subscription-optin"`
-	UnsubscribeSubscribersFromLists *sqlx.Stmt `query:"unsubscribe-subscribers-from-lists"`
-	DeleteSubscribers               *sqlx.Stmt `query:"delete-subscribers"`
-	DeleteBlocklistedSubscribers    *sqlx.Stmt `query:"delete-blocklisted-subscribers"`
-	DeleteOrphanSubscribers         *sqlx.Stmt `query:"delete-orphan-subscribers"`
-	UnsubscribeByCampaign           *sqlx.Stmt `query:"unsubscribe-by-campaign"`
-	ExportSubscriberData            *sqlx.Stmt `query:"export-subscriber-data"`
-	GetSubscriberActivity           *sqlx.Stmt `query:"get-subscriber-activity"`
+	InsertSubscriber                Statement `query:"insert-subscriber"`
+	UpsertSubscriber                Statement `query:"upsert-subscriber"`
+	UpsertBlocklistSubscriber       Statement `query:"upsert-blocklist-subscriber"`
+	GetSubscriber                   Statement `query:"get-subscriber"`
+	HasSubscriberLists              Statement `query:"has-subscriber-list"`
+	GetSubscribersByEmails          Statement `query:"get-subscribers-by-emails"`
+	GetSubscriberLists              Statement `query:"get-subscriber-lists"`
+	GetSubscriptions                Statement `query:"get-subscriptions"`
+	GetSubscriberListsLazy          Statement `query:"get-subscriber-lists-lazy"`
+	UpdateSubscriber                Statement `query:"update-subscriber"`
+	UpdateSubscriberWithLists       Statement `query:"update-subscriber-with-lists"`
+	BlocklistSubscribers            Statement `query:"blocklist-subscribers"`
+	AddSubscribersToLists           Statement `query:"add-subscribers-to-lists"`
+	DeleteSubscriptions             Statement `query:"delete-subscriptions"`
+	DeleteUnconfirmedSubscriptions  Statement `query:"delete-unconfirmed-subscriptions"`
+	ConfirmSubscriptionOptin        Statement `query:"confirm-subscription-optin"`
+	UnsubscribeSubscribersFromLists Statement `query:"unsubscribe-subscribers-from-lists"`
+	DeleteSubscribers               Statement `query:"delete-subscribers"`
+	DeleteBlocklistedSubscribers    Statement `query:"delete-blocklisted-subscribers"`
+	DeleteOrphanSubscribers         Statement `query:"delete-orphan-subscribers"`
+	UnsubscribeByCampaign           Statement `query:"unsubscribe-by-campaign"`
+	ExportSubscriberData            Statement `query:"export-subscriber-data"`
+	GetSubscriberActivity           Statement `query:"get-subscriber-activity"`
 
 	// Non-prepared arbitrary subscriber queries.
-	QuerySubscribers                       string     `query:"query-subscribers"`
-	QuerySubscribersCount                  string     `query:"query-subscribers-count"`
-	QuerySubscribersCountAll               *sqlx.Stmt `query:"query-subscribers-count-all"`
-	QuerySubscribersForExport              string     `query:"query-subscribers-for-export"`
-	QuerySubscribersTpl                    string     `query:"query-subscribers-template"`
-	DeleteSubscribersByQuery               string     `query:"delete-subscribers-by-query"`
-	AddSubscribersToListsByQuery           string     `query:"add-subscribers-to-lists-by-query"`
-	BlocklistSubscribersByQuery            string     `query:"blocklist-subscribers-by-query"`
-	DeleteSubscriptionsByQuery             string     `query:"delete-subscriptions-by-query"`
-	UnsubscribeSubscribersFromListsByQuery string     `query:"unsubscribe-subscribers-from-lists-by-query"`
+	QuerySubscribers                       string    `query:"query-subscribers"`
+	QuerySubscribersCount                  string    `query:"query-subscribers-count"`
+	QuerySubscribersCountAll               Statement `query:"query-subscribers-count-all"`
+	QuerySubscribersForExport              string    `query:"query-subscribers-for-export"`
+	QuerySubscribersTpl                    string    `query:"query-subscribers-template"`
+	DeleteSubscribersByQuery               string    `query:"delete-subscribers-by-query"`
+	AddSubscribersToListsByQuery           string    `query:"add-subscribers-to-lists-by-query"`
+	BlocklistSubscribersByQuery            string    `query:"blocklist-subscribers-by-query"`
+	DeleteSubscriptionsByQuery             string    `query:"delete-subscriptions-by-query"`
+	UnsubscribeSubscribersFromListsByQuery string    `query:"unsubscribe-subscribers-from-lists-by-query"`
 
-	CreateList      *sqlx.Stmt `query:"create-list"`
-	QueryLists      string     `query:"query-lists"`
-	GetLists        *sqlx.Stmt `query:"get-lists"`
-	GetListsByOptin *sqlx.Stmt `query:"get-lists-by-optin"`
-	GetListTypes    *sqlx.Stmt `query:"get-list-types"`
-	UpdateList      *sqlx.Stmt `query:"update-list"`
-	UpdateListsDate *sqlx.Stmt `query:"update-lists-date"`
-	DeleteLists     *sqlx.Stmt `query:"delete-lists"`
+	CreateList      Statement `query:"create-list"`
+	QueryLists      string    `query:"query-lists"`
+	GetLists        Statement `query:"get-lists"`
+	GetListsByOptin Statement `query:"get-lists-by-optin"`
+	GetListTypes    Statement `query:"get-list-types"`
+	UpdateList      Statement `query:"update-list"`
+	UpdateListsDate Statement `query:"update-lists-date"`
+	DeleteLists     Statement `query:"delete-lists"`
 
-	CreateCampaign        *sqlx.Stmt `query:"create-campaign"`
-	QueryCampaigns        string     `query:"query-campaigns"`
-	GetCampaign           *sqlx.Stmt `query:"get-campaign"`
-	GetCampaignForPreview *sqlx.Stmt `query:"get-campaign-for-preview"`
-	GetCampaignStats      *sqlx.Stmt `query:"get-campaign-stats"`
-	GetCampaignStatus     *sqlx.Stmt `query:"get-campaign-status"`
-	GetArchivedCampaigns  *sqlx.Stmt `query:"get-archived-campaigns"`
-	CampaignHasLists      *sqlx.Stmt `query:"campaign-has-lists"`
+	CreateCampaign        Statement `query:"create-campaign"`
+	QueryCampaigns        string    `query:"query-campaigns"`
+	GetCampaign           Statement `query:"get-campaign"`
+	GetCampaignForPreview Statement `query:"get-campaign-for-preview"`
+	GetCampaignStats      Statement `query:"get-campaign-stats"`
+	GetCampaignStatus     Statement `query:"get-campaign-status"`
+	GetArchivedCampaigns  Statement `query:"get-archived-campaigns"`
+	CampaignHasLists      Statement `query:"campaign-has-lists"`
 
 	// These two queries are read as strings and based on settings.individual_tracking=on/off,
 	// are interpolated and copied to view and click counts. Same query, different tables.
-	GetCampaignAnalyticsCounts string     `query:"get-campaign-analytics-counts"`
-	GetCampaignViewCounts      *sqlx.Stmt `query:"get-campaign-view-counts"`
-	GetCampaignClickCounts     *sqlx.Stmt `query:"get-campaign-click-counts"`
-	GetCampaignLinkCounts      *sqlx.Stmt `query:"get-campaign-link-counts"`
-	GetCampaignBounceCounts    *sqlx.Stmt `query:"get-campaign-bounce-counts"`
-	DeleteCampaignViews        *sqlx.Stmt `query:"delete-campaign-views"`
-	DeleteCampaignLinkClicks   *sqlx.Stmt `query:"delete-campaign-link-clicks"`
-	ExportCampaignViews        *sqlx.Stmt `query:"export-campaign-views"`
-	ExportCampaignLinkClicks   *sqlx.Stmt `query:"export-campaign-link-clicks"`
+	GetCampaignAnalyticsCounts string    `query:"get-campaign-analytics-counts"`
+	GetCampaignViewCounts      Statement `query:"get-campaign-view-counts"`
+	GetCampaignClickCounts     Statement `query:"get-campaign-click-counts"`
+	GetCampaignLinkCounts      Statement `query:"get-campaign-link-counts"`
+	GetCampaignBounceCounts    Statement `query:"get-campaign-bounce-counts"`
+	DeleteCampaignViews        Statement `query:"delete-campaign-views"`
+	DeleteCampaignLinkClicks   Statement `query:"delete-campaign-link-clicks"`
+	ExportCampaignViews        Statement `query:"export-campaign-views"`
+	ExportCampaignLinkClicks   Statement `query:"export-campaign-link-clicks"`
 
-	NextCampaigns            *sqlx.Stmt `query:"next-campaigns"`
-	GetRunningCampaign       *sqlx.Stmt `query:"get-running-campaign"`
-	NextCampaignSubscribers  *sqlx.Stmt `query:"next-campaign-subscribers"`
-	GetOneCampaignSubscriber *sqlx.Stmt `query:"get-one-campaign-subscriber"`
-	UpdateCampaign           *sqlx.Stmt `query:"update-campaign"`
-	UpdateCampaignStatus     *sqlx.Stmt `query:"update-campaign-status"`
-	UpdateCampaignCounts     *sqlx.Stmt `query:"update-campaign-counts"`
-	UpdateCampaignArchive    *sqlx.Stmt `query:"update-campaign-archive"`
-	RegisterCampaignView     *sqlx.Stmt `query:"register-campaign-view"`
-	DeleteCampaign           *sqlx.Stmt `query:"delete-campaign"`
-	DeleteCampaigns          *sqlx.Stmt `query:"delete-campaigns"`
+	NextCampaigns            Statement `query:"next-campaigns"`
+	GetRunningCampaign       Statement `query:"get-running-campaign"`
+	NextCampaignSubscribers  Statement `query:"next-campaign-subscribers"`
+	GetOneCampaignSubscriber Statement `query:"get-one-campaign-subscriber"`
+	UpdateCampaign           Statement `query:"update-campaign"`
+	UpdateCampaignStatus     Statement `query:"update-campaign-status"`
+	UpdateCampaignCounts     Statement `query:"update-campaign-counts"`
+	UpdateCampaignArchive    Statement `query:"update-campaign-archive"`
+	RegisterCampaignView     Statement `query:"register-campaign-view"`
+	DeleteCampaign           Statement `query:"delete-campaign"`
+	DeleteCampaigns          Statement `query:"delete-campaigns"`
 
-	InsertMedia *sqlx.Stmt `query:"insert-media"`
-	GetMedia    *sqlx.Stmt `query:"get-media"`
-	QueryMedia  *sqlx.Stmt `query:"query-media"`
-	DeleteMedia *sqlx.Stmt `query:"delete-media"`
+	InsertMedia Statement `query:"insert-media"`
+	GetMedia    Statement `query:"get-media"`
+	QueryMedia  Statement `query:"query-media"`
+	DeleteMedia Statement `query:"delete-media"`
 
-	CreateTemplate     *sqlx.Stmt `query:"create-template"`
-	GetTemplates       *sqlx.Stmt `query:"get-templates"`
-	UpdateTemplate     *sqlx.Stmt `query:"update-template"`
-	SetDefaultTemplate *sqlx.Stmt `query:"set-default-template"`
-	DeleteTemplate     *sqlx.Stmt `query:"delete-template"`
+	CreateTemplate     Statement `query:"create-template"`
+	GetTemplates       Statement `query:"get-templates"`
+	UpdateTemplate     Statement `query:"update-template"`
+	SetDefaultTemplate Statement `query:"set-default-template"`
+	DeleteTemplate     Statement `query:"delete-template"`
 
-	CreateLink        *sqlx.Stmt `query:"create-link"`
-	GetLinkURL        *sqlx.Stmt `query:"get-link-url"`
-	RegisterLinkClick *sqlx.Stmt `query:"register-link-click"`
+	CreateLink        Statement `query:"create-link"`
+	GetLinkURL        Statement `query:"get-link-url"`
+	RegisterLinkClick Statement `query:"register-link-click"`
 
-	GetSettings         *sqlx.Stmt `query:"get-settings"`
-	UpdateSettings      *sqlx.Stmt `query:"update-settings"`
-	UpdateSettingsByKey *sqlx.Stmt `query:"update-settings-by-key"`
+	GetSettings         Statement `query:"get-settings"`
+	UpdateSettings      Statement `query:"update-settings"`
+	UpdateSettingsByKey Statement `query:"update-settings-by-key"`
 
-	// GetStats *sqlx.Stmt `query:"get-stats"`
-	RecordBounce                *sqlx.Stmt `query:"record-bounce"`
-	QueryBounces                string     `query:"query-bounces"`
-	BlocklistBouncedSubscribers *sqlx.Stmt `query:"blocklist-bounced-subscribers"`
-	DeleteBounces               *sqlx.Stmt `query:"delete-bounces"`
-	DeleteBouncesBySubscriber   *sqlx.Stmt `query:"delete-bounces-by-subscriber"`
-	GetDBInfo                   string     `query:"get-db-info"`
+	// GetStats Statement `query:"get-stats"`
+	RecordBounce                Statement `query:"record-bounce"`
+	QueryBounces                string    `query:"query-bounces"`
+	BlocklistBouncedSubscribers Statement `query:"blocklist-bounced-subscribers"`
+	DeleteBounces               Statement `query:"delete-bounces"`
+	DeleteBouncesBySubscriber   Statement `query:"delete-bounces-by-subscriber"`
+	GetDBInfo                   string    `query:"get-db-info"`
 
-	CreateUser         *sqlx.Stmt `query:"create-user"`
-	UpdateUser         *sqlx.Stmt `query:"update-user"`
-	UpdateUserProfile  *sqlx.Stmt `query:"update-user-profile"`
-	UpdateUserLogin    *sqlx.Stmt `query:"update-user-login"`
-	SetUserTwoFA       *sqlx.Stmt `query:"set-user-twofa"`
-	DeleteUsers        *sqlx.Stmt `query:"delete-users"`
-	GetUsers           *sqlx.Stmt `query:"get-users"`
-	GetUser            *sqlx.Stmt `query:"get-user"`
-	GetAPITokens       *sqlx.Stmt `query:"get-api-tokens"`
-	LoginUser          *sqlx.Stmt `query:"login-user"`
-	DeleteUserSessions *sqlx.Stmt `query:"delete-user-sessions"`
+	CreateUser         Statement `query:"create-user"`
+	UpdateUser         Statement `query:"update-user"`
+	UpdateUserProfile  Statement `query:"update-user-profile"`
+	UpdateUserLogin    Statement `query:"update-user-login"`
+	SetUserTwoFA       Statement `query:"set-user-twofa"`
+	DeleteUsers        Statement `query:"delete-users"`
+	GetUsers           Statement `query:"get-users"`
+	GetUser            Statement `query:"get-user"`
+	GetAPITokens       Statement `query:"get-api-tokens"`
+	LoginUser          Statement `query:"login-user"`
+	DeleteUserSessions Statement `query:"delete-user-sessions"`
 
-	CreateRole            *sqlx.Stmt `query:"create-role"`
-	GetUserRoles          *sqlx.Stmt `query:"get-user-roles"`
-	GetListRoles          *sqlx.Stmt `query:"get-list-roles"`
-	UpdateRole            *sqlx.Stmt `query:"update-role"`
-	DeleteRole            *sqlx.Stmt `query:"delete-role"`
-	UpsertListPermissions *sqlx.Stmt `query:"upsert-list-permissions"`
-	DeleteListPermission  *sqlx.Stmt `query:"delete-list-permission"`
+	CreateRole            Statement `query:"create-role"`
+	GetUserRoles          Statement `query:"get-user-roles"`
+	GetListRoles          Statement `query:"get-list-roles"`
+	UpdateRole            Statement `query:"update-role"`
+	DeleteRole            Statement `query:"delete-role"`
+	UpsertListPermissions Statement `query:"upsert-list-permissions"`
+	DeleteListPermission  Statement `query:"delete-list-permission"`
 }
 
 // compileSubscriberQueryTpl takes an arbitrary WHERE expressions
