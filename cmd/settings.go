@@ -397,8 +397,6 @@ func (a *App) TestSMTPSettings(c echo.Context) error {
 
 	// Initialize a new SMTP pool.
 	req.MaxConns = 1
-	req.IdleTimeout = time.Second * 2
-	req.PoolWaitTimeout = time.Second * 2
 	msgr, err := email.New("", req)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest,

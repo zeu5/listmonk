@@ -1,6 +1,7 @@
 package dbconn
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -154,5 +155,76 @@ func TestSQLiteSchema(t *testing.T) {
 	var dashboard string
 	if err := db.Get(&dashboard, "SELECT data FROM mat_dashboard_counts"); err != nil {
 		t.Fatalf("read dashboard view: %v", err)
+	}
+}
+
+func TestSQLiteUpdateSettingsStoresJSONValues(t *testing.T) {
+	db, err := Open(Config{Type: SQLite, Path: t.TempDir() + "/settings.db"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	schema, err := os.ReadFile("../../schema-sqlite.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = db.Exec(string(schema)); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile("../../queries-sqlite/misc.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	queries, err := goyesql.ParseBytes(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err = db.Exec("UPDATE settings SET value=? WHERE key=?", "http://localhost:9000", "app.root_url"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = db.Exec("UPDATE settings SET value=? WHERE key=?", "0", "app.enable_public_archive"); err != nil {
+		t.Fatal(err)
+	}
+	var recovered string
+	if err = db.Get(&recovered, queries["get-settings"].Query); err != nil {
+		t.Fatal(err)
+	}
+	var recoveredSettings map[string]any
+	if err = json.Unmarshal([]byte(recovered), &recoveredSettings); err != nil {
+		t.Fatal(err)
+	}
+	if recoveredSettings["app.root_url"] != "http://localhost:9000" {
+		t.Fatalf("recovered app.root_url = %#v", recoveredSettings["app.root_url"])
+	}
+	if recoveredSettings["app.enable_public_archive"] != false {
+		t.Fatalf("recovered app.enable_public_archive = %#v", recoveredSettings["app.enable_public_archive"])
+	}
+
+	in := []byte(`{
+		"app.root_url": "http://localhost:9000",
+		"app.message_rate": 25,
+		"app.enable_public_archive": false,
+		"app.notify_emails": ["admin@example.com"],
+		"security.oidc": {"enabled": true, "default_user_role_id": null},
+		"smtp": [{"enabled": true, "host": "smtp.example.com", "port": 587}]
+	}`)
+	if _, err = db.Exec(queries["update-settings"].Query, in); err != nil {
+		t.Fatal(err)
+	}
+
+	var raw string
+	if err = db.Get(&raw, queries["get-settings"].Query); err != nil {
+		t.Fatal(err)
+	}
+	var got map[string]any
+	if err = json.Unmarshal([]byte(raw), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got["app.root_url"] != "http://localhost:9000" {
+		t.Fatalf("app.root_url = %#v", got["app.root_url"])
+	}
+	if got["app.enable_public_archive"] != false {
+		t.Fatalf("app.enable_public_archive = %#v", got["app.enable_public_archive"])
 	}
 }

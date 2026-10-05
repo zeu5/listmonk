@@ -79,7 +79,11 @@ ORDER BY %order% LIMIT (CASE WHEN $8 < 1 THEN -1 ELSE $8 END) OFFSET $7;
 
 -- name: get-campaign
 SELECT campaigns.*,
-    COALESCE(templates.body, (SELECT body FROM templates WHERE is_default = 1 LIMIT 1), '') AS template_body
+    COALESCE(templates.body, (SELECT body FROM templates WHERE is_default = 1 LIMIT 1), '') AS template_body,
+    COALESCE((SELECT json_group_array(json_object('id', list_id, 'name', list_name))
+        FROM campaign_lists WHERE campaign_id = campaigns.id), '[]') AS lists,
+    COALESCE((SELECT json_group_array(json_object('id', media_id, 'filename', filename))
+        FROM campaign_media WHERE campaign_id = campaigns.id), '[]') AS media
     FROM campaigns
     LEFT JOIN templates ON (
         CASE WHEN $4 = 'default' THEN templates.id = campaigns.template_id
@@ -134,8 +138,8 @@ SELECT id as campaign_id,
     COALESCE(v.num, 0) AS views,
     COALESCE(c.num, 0) AS clicks,
     COALESCE(b.num, 0) AS bounces,
-    COALESCE(l.lists, '') AS lists,
-    COALESCE(m.media, '') AS media
+    COALESCE(l.lists, '[]') AS lists,
+    COALESCE(m.media, '[]') AS media
 FROM (SELECT CAST(value AS INTEGER) id,key FROM json_each(listmonk_array($1))) x
 LEFT JOIN lists AS l ON (l.campaign_id = id)
 LEFT JOIN media AS m ON (m.campaign_id = id)

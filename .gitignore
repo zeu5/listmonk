@@ -20,3 +20,4 @@ dist/*
 uploads/
 
 .codex
+*.db*

@@ -26,7 +26,7 @@
         <div v-if="canManage || canSend" class="buttons">
           <b-field grouped v-if="isEditing && canEdit">
             <b-field v-if="canManage" expanded>
-              <b-button expanded @click="() => onSubmit('update')" :loading="loading.campaigns" type="is-primary"
+              <b-button expanded @click="onSubmit('update')" :loading="loading.campaigns" type="is-primary"
                 icon-left="content-save-outline" data-cy="btn-save" aria-keyshortcuts="ctrl+s">
                 <span class="has-kbd">{{ $t('globals.buttons.saveChanges') }} <span class="kbd">Ctrl+S</span></span>
               </b-button>
@@ -62,7 +62,7 @@
         <section class="wrap">
           <div class="columns">
             <div class="column is-7">
-              <form @submit.prevent="() => onSubmit(isNew ? 'create' : 'update')">
+              <form @submit.prevent="onSubmit(isNew ? 'create' : 'update')">
                 <b-field :label="$t('globals.fields.name')" label-position="on-border">
                   <b-input :maxlength="200" :ref="'focus'" v-model="form.name" name="name" :disabled="!canEdit"
                     :placeholder="$t('globals.fields.name')" required autofocus />
