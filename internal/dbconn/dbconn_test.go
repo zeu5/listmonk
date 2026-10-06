@@ -227,4 +227,23 @@ func TestSQLiteUpdateSettingsStoresJSONValues(t *testing.T) {
 	if got["app.enable_public_archive"] != false {
 		t.Fatalf("app.enable_public_archive = %#v", got["app.enable_public_archive"])
 	}
+	if got["app.message_rate"] != float64(25) {
+		t.Fatalf("app.message_rate = %#v", got["app.message_rate"])
+	}
+	notifyEmails, ok := got["app.notify_emails"].([]any)
+	if !ok || len(notifyEmails) != 1 || notifyEmails[0] != "admin@example.com" {
+		t.Fatalf("app.notify_emails = %#v", got["app.notify_emails"])
+	}
+	oidc, ok := got["security.oidc"].(map[string]any)
+	if !ok || oidc["enabled"] != true || oidc["default_user_role_id"] != nil {
+		t.Fatalf("security.oidc = %#v", got["security.oidc"])
+	}
+	smtp, ok := got["smtp"].([]any)
+	if !ok || len(smtp) != 1 {
+		t.Fatalf("smtp = %#v", got["smtp"])
+	}
+	smtpServer, ok := smtp[0].(map[string]any)
+	if !ok || smtpServer["enabled"] != true || smtpServer["host"] != "smtp.example.com" || smtpServer["port"] != float64(587) {
+		t.Fatalf("smtp[0] = %#v", smtp[0])
+	}
 }

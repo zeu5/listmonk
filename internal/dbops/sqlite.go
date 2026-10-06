@@ -4,6 +4,7 @@ package dbops
 
 import (
 	"database/sql"
+	"database/sql/driver"
 	"fmt"
 
 	"github.com/jmoiron/sqlx"
@@ -45,8 +46,12 @@ func SQLite(db *sqlx.DB) map[string]models.Statement {
 				Body   string         `db:"body"`
 				Source sql.NullString `db:"body_source"`
 			}
-			if args[13] != nil {
-				_ = tx.Get(&tpl, "SELECT CASE WHEN type='campaign_visual' THEN NULL ELSE id END id,CASE WHEN type='campaign_visual' THEN body ELSE '' END body,body_source FROM templates WHERE id=?", args[13])
+			templateID, err := driverValue(args[13])
+			if err != nil {
+				return err
+			}
+			if templateID != nil {
+				_ = tx.Get(&tpl, "SELECT CASE WHEN type='campaign_visual' THEN NULL ELSE id END id,CASE WHEN type='campaign_visual' THEN body ELSE '' END body,body_source FROM templates WHERE id=?", templateID)
 			} else {
 				_ = tx.Get(&tpl, "SELECT id,'' body,body_source FROM templates WHERE is_default=1 AND ?!='visual' LIMIT 1", args[7])
 			}
@@ -54,9 +59,12 @@ func SQLite(db *sqlx.DB) map[string]models.Statement {
 			if body == "" {
 				body = tpl.Body
 			}
-			source := args[20]
+			source, err := driverValue(args[20])
+			if err != nil {
+				return err
+			}
 			if source == nil {
-				source = tpl.Source
+				source, _ = tpl.Source.Value()
 			}
 			err = tx.Get(dest, `INSERT INTO campaigns(uuid,type,name,subject,from_email,body,altbody,content_type,send_at,headers,attribs,tags,messenger,template_id,to_send,max_subscriber_id,archive,archive_slug,archive_template_id,archive_meta,body_source) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,0,?,?,?,?,?) RETURNING id`, args[0], args[1], args[2], args[3], args[4], body, args[6], args[7], args[8], args[9], args[10], args[11], args[12], tpl.ID, args[15], args[16], args[17], args[18], source)
 			if err != nil {
@@ -365,4 +373,11 @@ func asInt(v any) (int, bool) {
 		return int(n), true
 	}
 	return 0, false
+}
+
+func driverValue(value any) (any, error) {
+	if valuer, ok := value.(driver.Valuer); ok {
+		return valuer.Value()
+	}
+	return value, nil
 }
